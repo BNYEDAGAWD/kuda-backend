@@ -1,110 +1,200 @@
-version: '3.9'
+version: '3.8'
+
+# KUDA Development Docker Compose Configuration
+# Usage: docker-compose up -d
+# Includes: PostgreSQL, Redis, Backend API, pgAdmin, Redis Commander, LocalStack
 
 services:
+  # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: creative-approval-db
+    container_name: kuda-postgres-dev
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: creative_approval
+      POSTGRES_DB: kuda_dev
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    volumes:
+      - postgres_dev_data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d/migrations:ro
+      - ./scripts/init-db.sh:/docker-entrypoint-initdb.d/01-init.sh:ro
     ports:
       - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backend/migrations:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kuda_dev"]
+      interval: 5s
+      timeout: 3s
       retries: 5
     networks:
-      - creative-approval-network
+      - kuda-dev-network
 
+  # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: creative-approval-redis
+    container_name: kuda-redis-dev
+    restart: unless-stopped
+    command: redis-server --requirepass devpassword
+    volumes:
+      - redis_dev_data:/data
     ports:
       - "6379:6379"
-    volumes:
-      - redis_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 5s
+      timeout: 3s
       retries: 5
     networks:
-      - creative-approval-network
+      - kuda-dev-network
 
+  # KUDA Backend API (Development)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: creative-approval-backend
-    env_file:
-      - .env
-    environment:
-      NODE_ENV: development
-      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/creative_approval
-      REDIS_URL: redis://redis:6379
-    ports:
-      - "4000:4000"
-    volumes:
-      - ./backend/src:/app/src
-      - ./backend/package.json:/app/package.json
-      - ./backend/tsconfig.json:/app/tsconfig.json
-      - backend_node_modules:/app/node_modules
+      target: development
+    container_name: kuda-backend-dev
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: npm run dev
-    networks:
-      - creative-approval-network
+    environment:
+      # Database
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/kuda_dev
+      DB_POOL_MAX: 10
+      DB_IDLE_TIMEOUT: 30000
+      DB_CONNECTION_TIMEOUT: 5000
+
+      # Server
+      PORT: 4000
+      NODE_ENV: development
+
+      # AWS S3 (Development - LocalStack)
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: dev_access_key
+      AWS_SECRET_ACCESS_KEY: dev_secret_key
+      S3_BUCKET_NAME: kuda-assets-dev
+      S3_ENDPOINT: http://localstack:4566
+
+      # JWT
+      JWT_SECRET: dev_secret_key_change_in_production
+      JWT_EXPIRES_IN: 7d
+
+      # Gmail API (Development - Placeholder)
+      GMAIL_CLIENT_ID: placeholder_client_id
+      GMAIL_CLIENT_SECRET: placeholder_client_secret
+      GMAIL_REDIRECT_URI: http://localhost:4000/auth/gmail/callback
+      GMAIL_REFRESH_TOKEN: placeholder_refresh_token
+      GMAIL_FROM_EMAIL: dev@kargo.com
+
+      # KUDA Platform
+      KUDA_BASE_URL: http://localhost:3000
+
+      # Notification Processing (Disabled in dev)
+      ENABLE_NOTIFICATION_CRON: false
+      NOTIFICATION_CRON_SCHEDULE: "*/5 * * * *"
+
+      # Redis
+      REDIS_URL: redis://:devpassword@redis:6379
+
+      # Logging
+      LOG_LEVEL: debug
+
+      # CORS
+      CORS_ORIGIN: http://localhost:3000
+
+      # Feature Flags
+      ENABLE_LOGO_DETECTION: true
+      ENABLE_COLOR_EXTRACTION: true
+      ENABLE_DOCUMENT_SCANNING: true
+      ENABLE_MINIMAL_BRIEF: true
+
+      # Performance
+      ENABLE_PERFORMANCE_LOGGING: true
+      SLOW_QUERY_THRESHOLD_MS: 1000
+    ports:
+      - "4000:4000"
+    volumes:
+      # Hot reload support
+      - ./backend/src:/app/src:ro
+      - ./backend/migrations:/app/migrations:ro
+      - backend_dev_uploads:/app/uploads
+      - backend_dev_logs:/app/logs
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:4000/api/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:4000/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: creative-approval-frontend
-    environment:
-      VITE_API_URL: http://localhost:4000
-      VITE_API_PREFIX: /api
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend/src:/app/src
-      - ./frontend/public:/app/public
-      - ./frontend/index.html:/app/index.html
-      - ./frontend/package.json:/app/package.json
-      - ./frontend/tsconfig.json:/app/tsconfig.json
-      - ./frontend/vite.config.ts:/app/vite.config.ts
-      - ./frontend/tailwind.config.js:/app/tailwind.config.js
-      - ./frontend/postcss.config.js:/app/postcss.config.js
-      - frontend_node_modules:/app/node_modules
-    depends_on:
-      - backend
-    command: npm run dev -- --host 0.0.0.0
     networks:
-      - creative-approval-network
+      - kuda-dev-network
+
+  # pgAdmin (Database Management UI)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: kuda-pgadmin
+    restart: unless-stopped
+    depends_on:
+      - postgres
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@kargo.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - kuda-dev-network
+
+  # Redis Commander (Redis Management UI)
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: kuda-redis-commander
+    restart: unless-stopped
+    depends_on:
+      - redis
+    environment:
+      REDIS_HOSTS: local:redis:6379:0:devpassword
+    ports:
+      - "8081:8081"
+    networks:
+      - kuda-dev-network
+
+  # LocalStack (AWS Services Mock)
+  localstack:
+    image: localstack/localstack:latest
+    container_name: kuda-localstack
+    restart: unless-stopped
+    ports:
+      - "4566:4566"  # LocalStack Gateway
+      - "4510-4559:4510-4559"  # External services
+    environment:
+      SERVICES: s3
+      DEBUG: 1
+      DATA_DIR: /tmp/localstack/data
+      AWS_DEFAULT_REGION: us-east-1
+    volumes:
+      - localstack_data:/tmp/localstack
+    networks:
+      - kuda-dev-network
 
 volumes:
-  postgres_data:
+  postgres_dev_data:
     driver: local
-  redis_data:
+  redis_dev_data:
     driver: local
-  backend_node_modules:
+  backend_dev_uploads:
     driver: local
-  frontend_node_modules:
+  backend_dev_logs:
+    driver: local
+  pgadmin_data:
+    driver: local
+  localstack_data:
     driver: local
 
 networks:
-  creative-approval-network:
+  kuda-dev-network:
     driver: bridge

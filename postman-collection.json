@@ -1,0 +1,461 @@
+{
+  "info": {
+    "name": "KUDA API - Complete Collection",
+    "_postman_id": "kuda-api-collection-v2",
+    "description": "Complete Postman collection for KUDA (Kargo Unified Design Approval) API with all 23 Phase 2 endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:4000",
+      "type": "string"
+    },
+    {
+      "key": "jwt_token",
+      "value": "your_jwt_token_here",
+      "type": "string"
+    },
+    {
+      "key": "campaign_id",
+      "value": "test-campaign-id",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{jwt_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Check backend API health status"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Access Control",
+      "item": [
+        {
+          "name": "Grant Access",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user_email\": \"client@amazon.com\",\n  \"access_tier\": \"kuda_river\",\n  \"notes\": \"Primary client contact\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/campaigns/{{campaign_id}}/access/grant",
+              "host": ["{{base_url}}"],
+              "path": ["api", "campaigns", "{{campaign_id}}", "access", "grant"]
+            }
+          }
+        },
+        {
+          "name": "Batch Grant Access",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"users\": [\n    {\n      \"user_email\": \"client1@amazon.com\",\n      \"access_tier\": \"kuda_river\",\n      \"notes\": \"Primary contact\"\n    },\n    {\n      \"user_email\": \"observer@amazon.com\",\n      \"access_tier\": \"kuda_minnow\",\n      \"notes\": \"Observer\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/campaigns/{{campaign_id}}/access/batch-grant",
+              "host": ["{{base_url}}"],
+              "path": ["api", "campaigns", "{{campaign_id}}", "access", "batch-grant"]
+            }
+          }
+        },
+        {
+          "name": "Revoke Access",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/campaigns/{{campaign_id}}/access/client@amazon.com",
+              "host": ["{{base_url}}"],
+              "path": ["api", "campaigns", "{{campaign_id}}", "access", "client@amazon.com"]
+            }
+          }
+        },
+        {
+          "name": "Update Access Tier",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_tier\": \"kuda_ocean\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/campaigns/{{campaign_id}}/access/:access_id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "campaigns", "{{campaign_id}}", "access", ":access_id"],
+              "variable": [
+                {
+                  "key": "access_id",
+                  "value": "access-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Campaign Access",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/campaigns/{{campaign_id}}/access",
+              "host": ["{{base_url}}"],
+              "path": ["api", "campaigns", "{{campaign_id}}", "access"]
+            }
+          }
+        },
+        {
+          "name": "Get My Access",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/campaigns/{{campaign_id}}/access/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "campaigns", "{{campaign_id}}", "access", "me"]
+            }
+          }
+        },
+        {
+          "name": "Get Access Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/campaigns/{{campaign_id}}/access/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "campaigns", "{{campaign_id}}", "access", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "item": [
+        {
+          "name": "Schedule Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"notification_type\": \"static_mocks_ready\",\n  \"reference_type\": \"deliverable\",\n  \"reference_id\": \"deliverable-uuid\",\n  \"recipients\": {\n    \"to\": [\"client@amazon.com\"],\n    \"cc\": [\"am@kargo.com\"]\n  },\n  \"template_name\": \"staticMocksReady\",\n  \"template_data\": {\n    \"campaign_name\": \"Amazon Q4 Campaign\",\n    \"campaign_id\": \"{{campaign_id}}\",\n    \"approved_formats\": [\"970x250\", \"728x90\"],\n    \"demo_url\": \"https://kuda.kargo.com/demo/deliverable-uuid\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/campaigns/{{campaign_id}}/notifications/schedule",
+              "host": ["{{base_url}}"],
+              "path": ["api", "campaigns", "{{campaign_id}}", "notifications", "schedule"]
+            }
+          }
+        },
+        {
+          "name": "Process Notifications",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/notifications/process",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "process"]
+            },
+            "description": "Manually trigger notification processing (usually called by cron)"
+          }
+        },
+        {
+          "name": "Get Campaign Notifications",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/campaigns/{{campaign_id}}/notifications",
+              "host": ["{{base_url}}"],
+              "path": ["api", "campaigns", "{{campaign_id}}", "notifications"]
+            }
+          }
+        },
+        {
+          "name": "Get Notification",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/notifications/:notification_id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", ":notification_id"],
+              "variable": [
+                {
+                  "key": "notification_id",
+                  "value": "notification-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Cancel Notification",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/api/notifications/:notification_id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", ":notification_id"],
+              "variable": [
+                {
+                  "key": "notification_id",
+                  "value": "notification-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reschedule Notification",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_send_time\": \"2025-10-30T10:00:00Z\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/notifications/:notification_id/reschedule",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", ":notification_id", "reschedule"],
+              "variable": [
+                {
+                  "key": "notification_id",
+                  "value": "notification-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Notification Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/notifications/stats?days=30",
+              "host": ["{{base_url}}"],
+              "path": ["api", "notifications", "stats"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "30"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Email Threads",
+      "item": [
+        {
+          "name": "Get Campaign Threads",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/campaigns/{{campaign_id}}/threads",
+              "host": ["{{base_url}}"],
+              "path": ["api", "campaigns", "{{campaign_id}}", "threads"]
+            }
+          }
+        },
+        {
+          "name": "Get Thread",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/threads/:thread_id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "threads", ":thread_id"],
+              "variable": [
+                {
+                  "key": "thread_id",
+                  "value": "thread-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Archive Thread",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/threads/:thread_id/archive",
+              "host": ["{{base_url}}"],
+              "path": ["api", "threads", ":thread_id", "archive"],
+              "variable": [
+                {
+                  "key": "thread_id",
+                  "value": "thread-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Resolve Thread",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/threads/:thread_id/resolve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "threads", ":thread_id", "resolve"],
+              "variable": [
+                {
+                  "key": "thread_id",
+                  "value": "thread-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Thread Stats",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/campaigns/{{campaign_id}}/threads/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "campaigns", "{{campaign_id}}", "threads", "stats"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Changelogs",
+      "item": [
+        {
+          "name": "Generate Changelog",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"revision_number\": 2,\n  \"previous_version_id\": \"deliverable-v1-uuid\",\n  \"metadata_current\": {\n    \"fonts\": {\n      \"heading\": \"Helvetica\",\n      \"body\": \"Arial\",\n      \"size\": 16\n    },\n    \"colors\": {\n      \"primary\": \"#0066CC\",\n      \"secondary\": \"#28A745\"\n    },\n    \"layout\": {\n      \"logo_position\": { \"x\": 100, \"y\": 50 },\n      \"logo_size\": 120\n    },\n    \"copy\": {\n      \"headline\": \"Shop Now\",\n      \"cta\": \"Learn More\"\n    }\n  },\n  \"metadata_previous\": {\n    \"fonts\": {\n      \"heading\": \"Arial\",\n      \"body\": \"Arial\",\n      \"size\": 14\n    },\n    \"colors\": {\n      \"primary\": \"#0055BB\",\n      \"secondary\": \"#28A745\"\n    },\n    \"layout\": {\n      \"logo_position\": { \"x\": 100, \"y\": 70 },\n      \"logo_size\": 100\n    },\n    \"copy\": {\n      \"headline\": \"Buy Now\",\n      \"cta\": \"Learn More\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/deliverables/:deliverable_id/changelogs/generate",
+              "host": ["{{base_url}}"],
+              "path": ["api", "deliverables", ":deliverable_id", "changelogs", "generate"],
+              "variable": [
+                {
+                  "key": "deliverable_id",
+                  "value": "deliverable-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Deliverable Changelogs",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/deliverables/:deliverable_id/changelogs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "deliverables", ":deliverable_id", "changelogs"],
+              "variable": [
+                {
+                  "key": "deliverable_id",
+                  "value": "deliverable-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Changelog",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/api/changelogs/:changelog_id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "changelogs", ":changelog_id"],
+              "variable": [
+                {
+                  "key": "changelog_id",
+                  "value": "changelog-uuid-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Mark Changelog Reviewed",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/api/changelogs/:changelog_id/review",
+              "host": ["{{base_url}}"],
+              "path": ["api", "changelogs", ":changelog_id", "review"],
+              "variable": [
+                {
+                  "key": "changelog_id",
+                  "value": "changelog-uuid-here"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -11,9 +11,12 @@ import morgan from 'morgan';
 import { db } from './config/database.config';
 import { Logger } from './utils/logger';
 
-// Routes
-import assetPackageRoutes from './routes/asset-package.routes';
-import assetRoutes from './routes/asset.routes';
+// Routes - KCAP Workflow
+import createCampaignRouter from './routes/campaign.routes';
+import createAssetPackRouter from './routes/asset-pack.routes';
+import createDeliverableRouter from './routes/deliverable.routes';
+import createApprovalRouter from './routes/approval.routes';
+import createSLARouter from './routes/sla.routes';
 
 const logger = new Logger('App');
 
@@ -72,17 +75,28 @@ export class App {
       });
     });
 
-    // API routes
-    this.app.use('/api/assets', assetRoutes);
-    this.app.use('/api/packages', assetPackageRoutes);
+    // API routes - KCAP Workflow
+    this.app.use('/api/campaigns', createCampaignRouter(db.pool));
+    this.app.use('/api/asset-packs', createAssetPackRouter(db.pool));
+    this.app.use('/api/deliverables', createDeliverableRouter(db.pool));
+    this.app.use('/api/approvals', createApprovalRouter(db.pool));
+    this.app.use('/api/sla-timers', createSLARouter(db.pool));
 
     // Root route
     this.app.get('/', (req: Request, res: Response) => {
       res.json({
-        name: 'Creative Approval Workflow Automation API',
-        version: '1.0.0',
+        name: 'Kargo Creative Approval Platform (KCAP) API',
+        version: '2.0.0',
         status: 'running',
-        documentation: '/api-docs',
+        workflow: 'Client uploads assets → Kargo builds creatives → Client approves',
+        endpoints: {
+          campaigns: '/api/campaigns',
+          assetPacks: '/api/asset-packs',
+          deliverables: '/api/deliverables',
+          approvals: '/api/approvals',
+          slaTimers: '/api/sla-timers',
+          health: '/health'
+        }
       });
     });
 
